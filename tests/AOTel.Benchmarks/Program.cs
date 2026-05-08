@@ -1,1 +1,4 @@
-﻿Console.WriteLine("Hello, World!");
+﻿using BenchmarkDotNet.Running;
+using AOTel.Benchmarks;
+
+BenchmarkRunner.Run<OtlpTraceReaderBenchmarks>();
