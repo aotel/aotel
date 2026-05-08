@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "dgSpecHash": "Wtr3cfuCfHw=",
+  "success": true,
+  "projectFilePath": "C:\\Repos\\AOTel\\tests\\AOTel.Benchmarks\\AOTel.Benchmarks.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Abdelghani\\.nuget\\packages\\microsoft.dotnet.ilcompiler\\10.0.7\\microsoft.dotnet.ilcompiler.10.0.7.nupkg.sha512",
+    "C:\\Users\\Abdelghani\\.nuget\\packages\\microsoft.net.illink.tasks\\10.0.7\\microsoft.net.illink.tasks.10.0.7.nupkg.sha512",
+    "C:\\Users\\Abdelghani\\.nuget\\packages\\runtime.win-x64.microsoft.dotnet.ilcompiler\\10.0.7\\runtime.win-x64.microsoft.dotnet.ilcompiler.10.0.7.nupkg.sha512",
+    "C:\\Users\\Abdelghani\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\10.0.7\\microsoft.netcore.app.runtime.win-x64.10.0.7.nupkg.sha512",
+    "C:\\Users\\Abdelghani\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\10.0.7\\microsoft.windowsdesktop.app.runtime.win-x64.10.0.7.nupkg.sha512",
+    "C:\\Users\\Abdelghani\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\10.0.7\\microsoft.aspnetcore.app.runtime.win-x64.10.0.7.nupkg.sha512",
+    "C:\\Users\\Abdelghani\\.nuget\\packages\\microsoft.netcore.app.runtime.nativeaot.win-x64\\10.0.7\\microsoft.netcore.app.runtime.nativeaot.win-x64.10.0.7.nupkg.sha512",
+    "C:\\Users\\Abdelghani\\.nuget\\packages\\runtime.win-x64.microsoft.dotnet.ilcompiler\\10.0.7\\runtime.win-x64.microsoft.dotnet.ilcompiler.10.0.7.nupkg.sha512"
+  ],
+  "logs": []
+}

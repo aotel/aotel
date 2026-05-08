@@ -1,0 +1,46 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-test-benchmark:
+    name: Build, Test, and Enforce Memory Limits
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore Dependencies
+        run: dotnet restore
+
+      - name: Build Project (Release)
+        run: dotnet build -c Release --no-restore
+
+      - name: Execute Unit Tests (Release)
+        run: dotnet test -c Release --no-build
+
+      - name: Execute BenchmarkDotNet Harness
+        run: dotnet run -c Release --project tests/AOTel.Benchmarks --no-build
+
+      - name: Enforce 0-byte Allocation Rule
+        run: |
+          echo "Analyzing BenchmarkDotNet results for memory allocations..."
+          # This grep command searches the BDN Markdown output for any non-zero allocation representations (e.g., '24 B', '1.5 KB', '0.0015' Gen collections).
+          # By default, 0-byte allocations output a dash '-'.
+          if grep -qE "([1-9][0-9]*\.[0-9]+|[1-9][0-9]*)\s*(B|KB|MB)" BenchmarkDotNet.Artifacts/results/*.md; then
+            echo "::error::Memory allocation detected! The core parser paths must remain strictly zero-allocation."
+            exit 1
+          fi
+          echo "Validation passed: 0-byte allocations confirmed."

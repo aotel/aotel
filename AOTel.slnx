@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AOTel.Core/AOTel.Core.csproj" />
+    <Project Path="src/AOTel.Hosting/AOTel.Hosting.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AOTel.Benchmarks/AOTel.Benchmarks.csproj" />
+    <Project Path="tests/AOTel.Tests/AOTel.Tests.csproj" />
+  </Folder>
+</Solution>

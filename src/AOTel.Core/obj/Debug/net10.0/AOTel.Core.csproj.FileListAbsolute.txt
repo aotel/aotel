@@ -1,0 +1,11 @@
+C:\Repos\AOTel\src\AOTel.Core\bin\Debug\net10.0\AOTel.Core.deps.json
+C:\Repos\AOTel\src\AOTel.Core\bin\Debug\net10.0\AOTel.Core.dll
+C:\Repos\AOTel\src\AOTel.Core\bin\Debug\net10.0\AOTel.Core.pdb
+C:\Repos\AOTel\src\AOTel.Core\obj\Debug\net10.0\AOTel.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Repos\AOTel\src\AOTel.Core\obj\Debug\net10.0\AOTel.Core.AssemblyInfoInputs.cache
+C:\Repos\AOTel\src\AOTel.Core\obj\Debug\net10.0\AOTel.Core.AssemblyInfo.cs
+C:\Repos\AOTel\src\AOTel.Core\obj\Debug\net10.0\AOTel.Core.csproj.CoreCompileInputs.cache
+C:\Repos\AOTel\src\AOTel.Core\obj\Debug\net10.0\AOTel.Core.dll
+C:\Repos\AOTel\src\AOTel.Core\obj\Debug\net10.0\refint\AOTel.Core.dll
+C:\Repos\AOTel\src\AOTel.Core\obj\Debug\net10.0\AOTel.Core.pdb
+C:\Repos\AOTel\src\AOTel.Core\obj\Debug\net10.0\ref\AOTel.Core.dll

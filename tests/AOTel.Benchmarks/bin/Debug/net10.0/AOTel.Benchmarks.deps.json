@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "AOTel.Benchmarks/1.0.0": {
+        "dependencies": {
+          "AOTel.Core": "1.0.0"
+        },
+        "runtime": {
+          "AOTel.Benchmarks.dll": {}
+        }
+      },
+      "AOTel.Core/1.0.0": {
+        "runtime": {
+          "AOTel.Core.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "AOTel.Benchmarks/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "AOTel.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
