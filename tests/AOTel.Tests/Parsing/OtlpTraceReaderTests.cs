@@ -1,5 +1,3 @@
-using System;
-using Xunit;
 using AOTel.Core.Parsing;
 
 namespace AOTel.Tests.Parsing;
@@ -38,11 +36,9 @@ public class OtlpTraceReaderTests
             Assert.False(spanFound, "The reader should only extract exactly one span.");
             spanFound = true;
 
-            byte[] expectedTraceId = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10];
-            Assert.True(span.TraceId.SequenceEqual(expectedTraceId), "TraceId slice did not match.");
-
-            byte[] expectedSpanId = [0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18];
-            Assert.True(span.SpanId.SequenceEqual(expectedSpanId), "SpanId slice did not match.");
+            Assert.Equal(0x0102030405060708ul, span.TraceIdHigh);
+            Assert.Equal(0x090A0B0C0D0E0F10ul, span.TraceIdLow);
+            Assert.Equal(0x1112131415161718ul, span.SpanId);
 
             Assert.Equal(0x0102030405060708ul, span.StartTimeUnixNano);
             Assert.Equal(0x1112131415161718ul, span.EndTimeUnixNano);

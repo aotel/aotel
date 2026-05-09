@@ -1,5 +1,3 @@
-using System;
-using Xunit;
 using AOTel.Core.Parsing;
 
 namespace AOTel.Tests.Parsing;
