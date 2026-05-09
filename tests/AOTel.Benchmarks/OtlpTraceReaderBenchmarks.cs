@@ -1,4 +1,3 @@
-using System;
 using AOTel.Core.Parsing;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;

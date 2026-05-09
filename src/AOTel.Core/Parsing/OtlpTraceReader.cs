@@ -1,27 +1,8 @@
-using System;
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
+using AOTel.Core.Models;
 
 namespace AOTel.Core.Parsing;
-
-/// <summary>
-/// Represents the extracted core fields of an OTLP Span.
-/// </summary>
-public readonly ref struct OtlpSpan
-{
-    public ReadOnlySpan<byte> TraceId { get; }
-    public ReadOnlySpan<byte> SpanId { get; }
-    public ulong StartTimeUnixNano { get; }
-    public ulong EndTimeUnixNano { get; }
-
-    public OtlpSpan(ReadOnlySpan<byte> traceId, ReadOnlySpan<byte> spanId, ulong startTime, ulong endTime)
-    {
-        TraceId = traceId;
-        SpanId = spanId;
-        StartTimeUnixNano = startTime;
-        EndTimeUnixNano = endTime;
-    }
-}
 
 /// <summary>
 /// High-performance, zero-allocation forward-only Protobuf reader for OTLP Traces.
@@ -147,8 +128,9 @@ public ref struct OtlpTraceReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static OtlpSpan ParseSpan(ReadOnlySpan<byte> span)
     {
-        ReadOnlySpan<byte> traceId = default;
-        ReadOnlySpan<byte> spanId = default;
+        ulong traceIdHigh = 0;
+        ulong traceIdLow = 0;
+        ulong spanIdVal = 0;
         ulong startTime = 0;
         ulong endTime = 0;
 
@@ -166,7 +148,12 @@ public ref struct OtlpTraceReader
                 var (len, lenConsumed) = VarIntDecoder.Decode(span);
                 if (lenConsumed == 0 || span.Length - lenConsumed < (int)len) break;
                 
-                traceId = span.Slice(lenConsumed, (int)len);
+                if (len == 16)
+                {
+                    traceIdHigh = BinaryPrimitives.ReadUInt64BigEndian(span.Slice(lenConsumed, 8));
+                    traceIdLow = BinaryPrimitives.ReadUInt64BigEndian(span.Slice(lenConsumed + 8, 8));
+                }
+                
                 span = span.Slice(lenConsumed + (int)len);
             }
             else if (field == 2 && wireType == 2) // span_id
@@ -174,7 +161,11 @@ public ref struct OtlpTraceReader
                 var (len, lenConsumed) = VarIntDecoder.Decode(span);
                 if (lenConsumed == 0 || span.Length - lenConsumed < (int)len) break;
                 
-                spanId = span.Slice(lenConsumed, (int)len);
+                if (len == 8)
+                {
+                    spanIdVal = BinaryPrimitives.ReadUInt64BigEndian(span.Slice(lenConsumed, 8));
+                }
+                
                 span = span.Slice(lenConsumed + (int)len);
             }
             else if (field == 7 && wireType == 1) // start_time_unix_nano (fixed64)
@@ -195,7 +186,14 @@ public ref struct OtlpTraceReader
             }
         }
 
-        return new OtlpSpan(traceId, spanId, startTime, endTime);
+        return new OtlpSpan
+        {
+            TraceIdHigh = traceIdHigh,
+            TraceIdLow = traceIdLow,
+            SpanId = spanIdVal,
+            StartTimeUnixNano = startTime,
+            EndTimeUnixNano = endTime
+        };
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
