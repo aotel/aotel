@@ -20,7 +20,12 @@ public static class BufferProcessor
         else
         {
             int length = (int)buffer.Length;
-            if (length <= 4096) // Safe stack limit
+            if (length > 1024 * 1024 * 5) // 5MB Hard Limit
+            {
+                throw new InvalidDataException("Payload exceeded maximum allowed edge size.");
+            }
+
+            if (length <= 4096)
             {
                 Span<byte> stackBuffer = stackalloc byte[length];
                 buffer.CopyTo(stackBuffer);
@@ -29,8 +34,6 @@ public static class BufferProcessor
             }
             else
             {
-                // Fallback for multi-segment payloads > 4096 bytes to prevent silent data drops.
-                // ArrayPool avoids GC allocations, respecting the CI memory limits.
                 byte[] rented = ArrayPool<byte>.Shared.Rent(length);
                 try
                 {

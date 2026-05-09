@@ -11,6 +11,8 @@ namespace AOTel.Core.Buffers;
 /// </summary>
 public readonly struct TelemetryBatch
 {
+    // FIX: Provide an explicit empty state to prevent null-reference logic in the hot path
+    public static readonly TelemetryBatch Empty = new(Array.Empty<OtlpSpan>(), 0);
     public OtlpSpan[] Buffer { get; }
     public int Count { get; }
 
@@ -21,66 +23,46 @@ public readonly struct TelemetryBatch
     }
 }
 
-/// <summary>
-/// High-throughput, zero-allocation ring buffer for telemetry payloads.
-/// Employs an MPSC (Multiple-Writer, Single-Reader) architecture suitable for Kestrel.
-/// </summary>
 public sealed class TelemetryBuffer
 {
     private readonly Channel<TelemetryBatch> _channel;
+    
+    // FIX: Zero-allocation drop tracking for operational visibility
+    private long _droppedBatches;
+    public long DroppedBatches => Interlocked.Read(ref _droppedBatches);
 
     public TelemetryBuffer(int maxCapacityBatches)
     {
         var options = new BoundedChannelOptions(maxCapacityBatches)
         {
-            // DropOldest enables our robust backpressure strategy. It prevents OOMs 
-            // by discarding stale telemetry if the backend consumer falls behind.
             FullMode = BoundedChannelFullMode.DropOldest,
-            
-            // Multiple Kestrel requests can write concurrently.
             SingleWriter = false, 
-            
-            // A dedicated background draining service will be reading.
             SingleReader = true,  
-            
-            // Disallowing synchronous continuations ensures that Kestrel's hot path ingestion 
-            // threads are never blocked or hijacked by reader processing continuations.
             AllowSynchronousContinuations = false 
         };
 
-        // CRITICAL FOR ZERO-ALLOCATION: 
-        // When the channel drops a batch due to backpressure, we hook into the itemDropped 
-        // callback to return the rented array directly back to the ArrayPool.
         _channel = Channel.CreateBounded<TelemetryBatch>(options, itemDropped: batch =>
         {
+            // FIX: Increment atomic counter whenever a batch is dropped
+            Interlocked.Increment(ref _droppedBatches);
             if (batch.Buffer != null)
             {
-                // We do not need to clear the array because OtlpSpan only contains primitives (ulong)
                 ArrayPool<OtlpSpan>.Shared.Return(batch.Buffer, clearArray: false);
             }
         });
     }
 
-    /// <summary>
-    /// Exposes the reader for the background drain service.
-    /// </summary>
+    // FIX: Signal background service to drain and exit cleanly
+    public void Shutdown() => _channel.Writer.TryComplete();
+
     public ChannelReader<TelemetryBatch> Reader => _channel.Reader;
 
-    /// <summary>
-    /// Publishes a rented array into the buffer.
-    /// Guaranteed synchronous and allocation-free because FullMode is DropOldest.
-    /// </summary>
     public void Publish(OtlpSpan[] rentedArray, int validItemCount)
     {
         var batch = new TelemetryBatch(rentedArray, validItemCount);
-        
-        // TryWrite never blocks and always succeeds with DropOldest.
         _channel.Writer.TryWrite(batch);
     }
 
-    /// <summary>
-    /// The background draining service MUST call this after processing a batch to recycle the memory.
-    /// </summary>
     public void ReturnBatch(TelemetryBatch batch)
     {
         if (batch.Buffer != null)

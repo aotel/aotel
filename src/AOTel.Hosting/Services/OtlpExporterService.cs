@@ -35,18 +35,17 @@ public sealed class OtlpExporterService : BackgroundService
         
         _httpClient = new HttpClient(handler);
     }
+    
+    private static readonly System.Net.Http.Headers.MediaTypeHeaderValue _protobufHeader 
+        = new("application/x-protobuf");
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("OTLP Exporter Service is starting.");
-
-        // Asynchronously wait for batches without blocking a thread.
         await foreach (var batch in _buffer.Reader.ReadAllAsync(stoppingToken).ConfigureAwait(false))
         {
             try
             {
                 var (rentedProtobuf, protoLength) = OtlpTraceWriter.Write(batch);
-                
                 try
                 {
                     if (protoLength > 0)
@@ -55,22 +54,9 @@ public sealed class OtlpExporterService : BackgroundService
                         {
                             Content = new ByteArrayContent(rentedProtobuf, 0, protoLength)
                         };
-                        request.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/x-protobuf");
-
-                        Console.WriteLine($"[Exporter] Attempting to send batch of {batch.Count} spans to Jaeger...");
+                        request.Content.Headers.ContentType = _protobufHeader; // Cached
 
                         using var response = await _httpClient.SendAsync(request, stoppingToken).ConfigureAwait(false);
-                        
-                        if (!response.IsSuccessStatusCode)
-                        {
-                            var error = await response.Content.ReadAsStringAsync(stoppingToken).ConfigureAwait(false);
-                            Console.WriteLine($"[Exporter] Jaeger REJECTED the payload: {response.StatusCode} - {error}");
-                            _logger.LogWarning("Failed to export telemetry batch. Status code: {StatusCode}", response.StatusCode);
-                        }
-                        else
-                        {
-                            Console.WriteLine("[Exporter] Jaeger ACCEPTED the payload! 🚀");
-                        }
                     }
                 }
                 finally
@@ -81,20 +67,13 @@ public sealed class OtlpExporterService : BackgroundService
                     }
                 }
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                _logger.LogError(ex, "A network error occurred while exporting the telemetry batch.");
-            }
             finally
             {
-                // CRITICAL FOR ZERO-ALLOCATION SAFETY:
-                // Always return the rented array back to the ArrayPool.
-                // If we miss this on network failures, the entire ArrayPool will eventually exhaust.
                 _buffer.ReturnBatch(batch);
             }
         }
     }
-    
+        
     public override void Dispose()
     {
         _httpClient.Dispose();

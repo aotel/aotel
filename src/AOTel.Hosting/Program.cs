@@ -8,6 +8,7 @@ using AOTel.Core.Buffers;
 var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions { Args = args });
 
 builder.WebHost.UseKestrelCore();
+builder.WebHost.UseSockets();
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.Listen(IPAddress.Parse("0.0.0.0"), 4318);
@@ -22,13 +23,11 @@ builder.Services.AddHostedService<OtlpExporterService>();
 
 var app = builder.Build();
 
+// Program.cs
 app.MapPost("/v1/traces", async (HttpContext context, TelemetryBuffer telemetryBuffer) =>
 {
     PipeReader reader = context.Request.BodyReader;
-    
-    // Pass the buffer into our processor so it knows where to send the data
     var processor = new TelemetryProcessor(telemetryBuffer);
-
     try
     {
         while (true)
@@ -36,25 +35,24 @@ app.MapPost("/v1/traces", async (HttpContext context, TelemetryBuffer telemetryB
             ReadResult result = await reader.ReadAsync();
             ReadOnlySequence<byte> seq = result.Buffer;
 
-            if (seq.Length > 0)
-            {
-                BufferProcessor.Process(seq, ref processor);
-            }
-
-            reader.AdvanceTo(seq.End);
-
             if (result.IsCompleted)
             {
+                if (seq.Length > 0)
+                {
+                    BufferProcessor.Process(seq, ref processor);
+                }
+                reader.AdvanceTo(seq.End);
                 break;
             }
+            
+            // Do not consume bytes, but mark them as examined to request more network data
+            reader.AdvanceTo(seq.Start, seq.End);
         }
     }
     finally
     {
-        // THE FIX: Flush the batched spans into the background channel!
         processor.Flush();
     }
-
     context.Response.StatusCode = StatusCodes.Status202Accepted;
 });
 

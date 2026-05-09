@@ -7,6 +7,10 @@ namespace AOTel.Core.Parsing;
 
 public static class OtlpTraceWriter
 {
+    private const int SingleSpanPayloadSize = 62; 
+    private const int SpanHeaderSize = 2; // Tag + Length VarInt for 62
+    private const int TotalBytesPerSpan = SingleSpanPayloadSize + SpanHeaderSize;
+
     // C# 12+ collection expressions mapped to ReadOnlySpan point directly to the assembly .data segment (0 heap allocation)
     private static ReadOnlySpan<byte> ResourceBlockBytes => 
     [
@@ -37,7 +41,7 @@ public static class OtlpTraceWriter
         // A single span payload is exactly 62 bytes (including the hardcoded 16-byte name). 
         // When preceded by the header [0x12] (Field 2, Length-Delimited) and [0x3E] (VarInt 62), 
         // it totals exactly 64 bytes per span.
-        int spansPayloadSize = batch.Count * 64;
+        int spansPayloadSize = batch.Count * TotalBytesPerSpan;
         
         // The Resource block is hardcoded to 33 bytes.
         int resourceBlockSize = 33;
