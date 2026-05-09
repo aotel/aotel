@@ -19,17 +19,19 @@ public struct TelemetryProcessor : ISpanProcessor
         _count = 0;
     }
 
+    // TelemetryProcessor.cs
     public void Process(in OtlpSpan span)
     {
-        // If a massive single request exceeds our rent, dynamically resize the array
         if (_count >= _rentedArray.Length)
         {
             var newArray = ArrayPool<OtlpSpan>.Shared.Rent(_rentedArray.Length * 2);
             Array.Copy(_rentedArray, newArray, _count);
-            ArrayPool<OtlpSpan>.Shared.Return(_rentedArray, clearArray: false);
-            _rentedArray = newArray;
+            
+            var oldArray = _rentedArray;
+            _rentedArray = newArray; // Update reference FIRST
+            
+            ArrayPool<OtlpSpan>.Shared.Return(oldArray, clearArray: false);
         }
-
         _rentedArray[_count++] = span;
     }
 
