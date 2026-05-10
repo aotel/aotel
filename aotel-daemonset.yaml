@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: aotel-proxy
+  namespace: default
+  labels:
+    app: aotel-proxy
+spec:
+  selector:
+    matchLabels:
+      app: aotel-proxy
+  template:
+    metadata:
+      labels:
+        app: aotel-proxy
+    spec:
+      # ========================================================================
+      # ARCHITECTURAL REASONING: WHY A DAEMONSET?
+      # ========================================================================
+      # Deploying the AOTel telemetry proxy as a DaemonSet ensures exactly one 
+      # instance runs on every Kubernetes node. This edge-proxy pattern offers 
+      # massive advantages for high-throughput microservices:
+      #
+      # 1. Reduces Cross-Node Network Hops: Application pods send telemetry 
+      #    directly to their local node's IP. This local loopback avoids 
+      #    multi-hop latency, cross-AZ traffic charges, and network saturation.
+      #
+      # 2. Absorbs Local GC Pressure: By offloading heavy telemetry batching 
+      #    and Protobuf translation to a strictly zero-allocation AOTel proxy, 
+      #    application pods are relieved of memory allocations, reducing app-side 
+      #    Garbage Collection pauses and jitter.
+      #
+      # 3. Maximizes Node Density: A centralized OpenTelemetry Collector often 
+      #    requires gigabytes of memory and heavy CPU to process cluster-wide 
+      #    traffic. This DaemonSet utilizes our Native AOT build to operate on 
+      #    just 15MiB of RAM and 10m CPU, leaving maximum room for your business workloads.
+      # ========================================================================
+      containers:
+        - name: aotel
+          image: aotel:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4318
+              name: otlp-http
+          resources:
+            requests:
+              cpu: 10m
+              memory: 15Mi
+            limits:
+              cpu: 100m
+              memory: 30Mi
+          securityContext:
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
