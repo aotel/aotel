@@ -17,7 +17,7 @@ Modern cloud-native applications generate massive amounts of telemetry (traces, 
 2. **Application GC Pressure**: Serialization, batching, and retrying telemetry payloads inside the application process steal CPU cycles and induce Garbage Collection (GC) pauses—hurting your actual business workloads.
 3. **Heavy Central Collectors**: Centralized collectors often require gigabytes of memory to handle cluster-wide ingestion spikes.
 
-**AOTel flips the architecture.** Deployed as a Kubernetes DaemonSet, AOTel is designed around a zero-allocation parsing pipeline. Application pods stream telemetry directly to their local node's IP (`HOST_IP:4318`). AOTel absorbs the payload instantly, parses telemetry through an allocation-free traversal pipeline on the hot path, and efficiently batches it to your backend (Jaeger, Datadog, Honeycomb, or a central OTel Collector). 
+**AOTel flips the architecture.** Deployed as a Kubernetes DaemonSet, AOTel is designed around a zero-allocation parsing pipeline. Application pods send telemetry directly to their local node's IP (`HOST_IP:4318`). AOTel utilizes highly efficient, bounded in-memory buffering to absorb the payload instantly before initiating the allocation-free traversal on the hot path, and efficiently batches it to your backend (Jaeger, Datadog, Honeycomb, or a central OTel Collector). 
 
 Your application pods are relieved of memory pressure, and cross-node telemetry traffic is drastically minimized.
 

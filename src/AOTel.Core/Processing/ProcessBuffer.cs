@@ -9,20 +9,21 @@ namespace AOTel.Core.Processing;
 /// </summary>
 public static class BufferProcessor
 {
-    public static void Process<TProcessor>(ReadOnlySequence<byte> buffer, ref TProcessor processor) 
+    public static bool Process<TProcessor>(ReadOnlySequence<byte> buffer, ref TProcessor processor) 
         where TProcessor : struct, ISpanProcessor
     {
         if (buffer.IsSingleSegment)
         {
             var otlpReader = new OtlpTraceReader(buffer.FirstSpan);
             foreach (var span in otlpReader) { processor.Process(in span); }
+            return true;
         }
         else
         {
             int length = (int)buffer.Length;
             if (length > 1024 * 1024 * 5) // 5MB Hard Limit
             {
-                throw new InvalidDataException("Payload exceeded maximum allowed edge size.");
+                return false;
             }
 
             if (length <= 4096)
@@ -46,6 +47,7 @@ public static class BufferProcessor
                     ArrayPool<byte>.Shared.Return(rented);
                 }
             }
+            return true;
         }
     }
 }
