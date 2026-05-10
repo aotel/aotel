@@ -35,13 +35,24 @@ app.MapPost("/v1/traces", async (HttpContext context, TelemetryBuffer telemetryB
             ReadResult result = await reader.ReadAsync();
             ReadOnlySequence<byte> seq = result.Buffer;
 
+            if (seq.Length > 1024 * 1024 * 5)
+            {
+                context.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
+                return;
+            }
+
             if (result.IsCompleted)
             {
                 if (seq.Length > 0)
                 {
-                    BufferProcessor.Process(seq, ref processor);
+                    if (!BufferProcessor.Process(seq, ref processor))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
+                        return;
+                    }
                 }
                 reader.AdvanceTo(seq.End);
+                context.Response.StatusCode = StatusCodes.Status202Accepted;
                 break;
             }
             
@@ -53,7 +64,6 @@ app.MapPost("/v1/traces", async (HttpContext context, TelemetryBuffer telemetryB
     {
         processor.Flush();
     }
-    context.Response.StatusCode = StatusCodes.Status202Accepted;
 });
 
 app.Run();
