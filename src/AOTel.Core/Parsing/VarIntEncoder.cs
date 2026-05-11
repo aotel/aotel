@@ -10,6 +10,8 @@ public static class VarIntEncoder
     /// <summary>
     /// Calculates the exact number of bytes required to encode the given value.
     /// </summary>
+    /// <param name="value">The value to encode.</param>
+    /// <returns>The number of bytes required to encode the value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetByteCount(ulong value)
     {
@@ -18,12 +20,16 @@ public static class VarIntEncoder
         {
             count++;
         }
+
         return count;
     }
 
     /// <summary>
     /// Encodes a 64-bit unsigned integer into the provided span.
     /// </summary>
+    /// <param name="value">The value to encode.</param>
+    /// <param name="destination">The destination span.</param>
+    /// <returns>The number of bytes written.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int Encode(ulong value, Span<byte> destination)
     {
@@ -33,6 +39,7 @@ public static class VarIntEncoder
             destination[bytesWritten++] = (byte)(value | 0x80);
             value >>= 7;
         }
+
         destination[bytesWritten++] = (byte)value;
         return bytesWritten;
     }

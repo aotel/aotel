@@ -1,4 +1,4 @@
-﻿using BenchmarkDotNet.Running;
-using AOTel.Benchmarks;
+﻿using AOTel.Benchmarks;
+using BenchmarkDotNet.Running;
 
 BenchmarkRunner.Run<OtlpTraceReaderBenchmarks>();

@@ -1,0 +1,9 @@
+# Banned APIs to ensure Native AOT compatibility and zero-allocation performance
+T:System.Reflection.Assembly;Reflection is not AOT friendly. Use typeof() or source generators.
+T:System.Reflection.MethodInfo;Reflection is not AOT friendly.
+M:System.Type.MakeGenericType(System.Type[]);Dynamic generics are not AOT friendly.
+M:System.Activator.CreateInstance(System.Type);Dynamic instantiation requires reflection. Use generics with new() constraints or source-generated factories.
+T:System.Reflection.DispatchProxy;Dynamic proxy generation is not supported in Native AOT.
+N:System.Reflection.Emit;Runtime code generation is entirely unsupported in Native AOT.
+M:System.Type.GetMethod(System.String);Dynamic method lookup via reflection is generally unsafe for AOT unless specifically annotated.
+M:System.Text.Json.JsonSerializer.Serialize(System.Object,System.Type,System.Text.Json.JsonSerializerOptions);Use strongly-typed source generated context for AOT.

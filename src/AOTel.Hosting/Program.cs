@@ -1,9 +1,9 @@
-using System.Net;
 using System.Buffers;
 using System.IO.Pipelines;
-using AOTel.Hosting.Services;
-using AOTel.Core.Processing;
+using System.Net;
 using AOTel.Core.Buffers;
+using AOTel.Core.Processing;
+using AOTel.Hosting.Services;
 
 var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions { Args = args });
 
@@ -51,11 +51,12 @@ app.MapPost("/v1/traces", async (HttpContext context, TelemetryBuffer telemetryB
                         return;
                     }
                 }
+
                 reader.AdvanceTo(seq.End);
                 context.Response.StatusCode = StatusCodes.Status202Accepted;
                 break;
             }
-            
+
             // Do not consume bytes, but mark them as examined to request more network data
             reader.AdvanceTo(seq.Start, seq.End);
         }
@@ -67,7 +68,3 @@ app.MapPost("/v1/traces", async (HttpContext context, TelemetryBuffer telemetryB
 });
 
 app.Run();
-
-
-// Make the implicit Program class public so test projects can access it with WebApplicationFactory
-public partial class Program { }

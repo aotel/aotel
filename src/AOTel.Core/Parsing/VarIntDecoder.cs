@@ -8,10 +8,10 @@ namespace AOTel.Core.Parsing;
 public readonly ref struct VarIntDecoder
 {
     /// <summary>
-    /// Decodes a 64-bit unsigned integer from a ReadOnlySpan<byte>.
+    /// Decodes a 64-bit unsigned integer from a ReadOnlySpan&lt;byte&gt;.
     /// </summary>
     /// <param name="buffer">The buffer containing the VarInt bytes.</param>
-    /// <returns>A tuple containing the decoded value and the number of bytes consumed. 
+    /// <returns>A tuple containing the decoded value and the number of bytes consumed.
     /// If the buffer is incomplete or invalid, BytesConsumed will be 0.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static (ulong Value, int BytesConsumed) Decode(ReadOnlySpan<byte> buffer)
@@ -22,7 +22,7 @@ public readonly ref struct VarIntDecoder
         for (int i = 0; i < buffer.Length; i++)
         {
             byte b = buffer[i];
-            
+
             // Mask out the MSB and shift the remaining 7 bits into the result
             result |= (ulong)(b & 0x7F) << shift;
 

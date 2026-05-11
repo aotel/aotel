@@ -10,23 +10,24 @@ namespace AOTel.Core.Parsing;
 /// </summary>
 public ref struct OtlpTraceReader
 {
-    private ReadOnlySpan<byte> _root;
-    private ReadOnlySpan<byte> _resource;
-    private ReadOnlySpan<byte> _scope;
+    private ReadOnlySpan<byte> root;
+    private ReadOnlySpan<byte> resource;
+    private ReadOnlySpan<byte> scope;
 
     public OtlpSpan Current { get; private set; }
 
     public OtlpTraceReader(ReadOnlySpan<byte> payload)
     {
-        _root = payload;
-        _resource = default;
-        _scope = default;
+        root = payload;
+        resource = default;
+        scope = default;
         Current = default;
     }
 
     /// <summary>
     /// Allows the reader to be used directly in a foreach loop without any boxing or interface dispatch.
     /// </summary>
+    /// <returns>The enumerator for this reader.</returns>
     public readonly OtlpTraceReader GetEnumerator() => this;
 
     public bool MoveNext()
@@ -34,90 +35,110 @@ public ref struct OtlpTraceReader
         while (true)
         {
             // 3. Parse spans within ScopeSpans
-            if (_scope.Length > 0)
+            if (scope.Length > 0)
             {
-                var (tag, consumed) = VarIntDecoder.Decode(_scope);
-                if (consumed == 0) { _scope = default; continue; }
-                _scope = _scope.Slice(consumed);
+                var (tag, consumed) = VarIntDecoder.Decode(scope);
+                if (consumed == 0)
+                {
+                    scope = default;
+                    continue;
+                }
+
+                scope = scope.Slice(consumed);
 
                 int field = (int)(tag >> 3);
                 int wireType = (int)(tag & 7);
 
-                if (field == 2 && wireType == 2) // spans
+                // spans
+                if (field == 2 && wireType == 2)
                 {
-                    var (len, lenConsumed) = VarIntDecoder.Decode(_scope);
-                    if (lenConsumed == 0 || _scope.Length - lenConsumed < (int)len) 
-                    { 
-                        _scope = default; 
-                        continue; 
+                    var (len, lenConsumed) = VarIntDecoder.Decode(scope);
+                    if (lenConsumed == 0 || scope.Length - lenConsumed < (int)len)
+                    {
+                        scope = default;
+                        continue;
                     }
-                    
-                    var spanPayload = _scope.Slice(lenConsumed, (int)len);
-                    _scope = _scope.Slice(lenConsumed + (int)len);
+
+                    var spanPayload = scope.Slice(lenConsumed, (int)len);
+                    scope = scope.Slice(lenConsumed + (int)len);
 
                     Current = ParseSpan(spanPayload);
                     return true;
                 }
-                
-                _scope = SkipField(_scope, wireType);
+
+                scope = SkipField(scope, wireType);
                 continue;
             }
 
             // 2. Parse scope_spans within ResourceSpans
-            if (_resource.Length > 0)
+            if (resource.Length > 0)
             {
-                var (tag, consumed) = VarIntDecoder.Decode(_resource);
-                if (consumed == 0) { _resource = default; continue; }
-                _resource = _resource.Slice(consumed);
+                var (tag, consumed) = VarIntDecoder.Decode(resource);
+                if (consumed == 0)
+                {
+                    resource = default;
+                    continue;
+                }
+
+                resource = resource.Slice(consumed);
 
                 int field = (int)(tag >> 3);
                 int wireType = (int)(tag & 7);
 
-                if (field == 2 && wireType == 2) // scope_spans
+                // scope_spans
+                if (field == 2 && wireType == 2)
                 {
-                    var (len, lenConsumed) = VarIntDecoder.Decode(_resource);
-                    if (lenConsumed == 0 || _resource.Length - lenConsumed < (int)len) 
-                    { 
-                        _resource = default; 
-                        continue; 
+                    var (len, lenConsumed) = VarIntDecoder.Decode(resource);
+                    if (lenConsumed == 0 || resource.Length - lenConsumed < (int)len)
+                    {
+                        resource = default;
+                        continue;
                     }
-                    
-                    _scope = _resource.Slice(lenConsumed, (int)len);
-                    _resource = _resource.Slice(lenConsumed + (int)len);
+
+                    scope = resource.Slice(lenConsumed, (int)len);
+                    resource = resource.Slice(lenConsumed + (int)len);
                 }
                 else
                 {
-                    _resource = SkipField(_resource, wireType);
+                    resource = SkipField(resource, wireType);
                 }
+
                 continue;
             }
 
             // 1. Parse resource_spans within the Root Request
-            if (_root.Length > 0)
+            if (root.Length > 0)
             {
-                var (tag, consumed) = VarIntDecoder.Decode(_root);
-                if (consumed == 0) { _root = default; continue; }
-                _root = _root.Slice(consumed);
+                var (tag, consumed) = VarIntDecoder.Decode(root);
+                if (consumed == 0)
+                {
+                    root = default;
+                    continue;
+                }
+
+                root = root.Slice(consumed);
 
                 int field = (int)(tag >> 3);
                 int wireType = (int)(tag & 7);
 
-                if (field == 1 && wireType == 2) // resource_spans
+                // resource_spans
+                if (field == 1 && wireType == 2)
                 {
-                    var (len, lenConsumed) = VarIntDecoder.Decode(_root);
-                    if (lenConsumed == 0 || _root.Length - lenConsumed < (int)len) 
-                    { 
-                        _root = default; 
-                        continue; 
+                    var (len, lenConsumed) = VarIntDecoder.Decode(root);
+                    if (lenConsumed == 0 || root.Length - lenConsumed < (int)len)
+                    {
+                        root = default;
+                        continue;
                     }
-                    
-                    _resource = _root.Slice(lenConsumed, (int)len);
-                    _root = _root.Slice(lenConsumed + (int)len);
+
+                    resource = root.Slice(lenConsumed, (int)len);
+                    root = root.Slice(lenConsumed + (int)len);
                 }
                 else
                 {
-                    _root = SkipField(_root, wireType);
+                    root = SkipField(root, wireType);
                 }
+
                 continue;
             }
 
@@ -137,46 +158,71 @@ public ref struct OtlpTraceReader
         while (span.Length > 0)
         {
             var (tag, consumed) = VarIntDecoder.Decode(span);
-            if (consumed == 0) break;
+            if (consumed == 0)
+            {
+                break;
+            }
+
             span = span.Slice(consumed);
 
             int field = (int)(tag >> 3);
             int wireType = (int)(tag & 7);
 
-            if (field == 1 && wireType == 2) // trace_id
+            // trace_id
+            if (field == 1 && wireType == 2)
             {
                 var (len, lenConsumed) = VarIntDecoder.Decode(span);
-                if (lenConsumed == 0 || span.Length - lenConsumed < (int)len) break;
-                
+                if (lenConsumed == 0 || span.Length - lenConsumed < (int)len)
+                {
+                    break;
+                }
+
                 if (len == 16)
                 {
                     traceIdHigh = BinaryPrimitives.ReadUInt64BigEndian(span.Slice(lenConsumed, 8));
                     traceIdLow = BinaryPrimitives.ReadUInt64BigEndian(span.Slice(lenConsumed + 8, 8));
                 }
-                
+
                 span = span.Slice(lenConsumed + (int)len);
             }
-            else if (field == 2 && wireType == 2) // span_id
+
+            // span_id
+            else if (field == 2 && wireType == 2)
             {
                 var (len, lenConsumed) = VarIntDecoder.Decode(span);
-                if (lenConsumed == 0 || span.Length - lenConsumed < (int)len) break;
-                
+                if (lenConsumed == 0 || span.Length - lenConsumed < (int)len)
+                {
+                    break;
+                }
+
                 if (len == 8)
                 {
                     spanIdVal = BinaryPrimitives.ReadUInt64BigEndian(span.Slice(lenConsumed, 8));
                 }
-                
+
                 span = span.Slice(lenConsumed + (int)len);
             }
-            else if (field == 7 && wireType == 1) // start_time_unix_nano (fixed64)
+
+            // start_time_unix_nano (fixed64)
+            else if (field == 7 && wireType == 1)
             {
-                if (span.Length < 8) break;
+                if (span.Length < 8)
+                {
+                    break;
+                }
+
                 startTime = BinaryPrimitives.ReadUInt64LittleEndian(span);
                 span = span.Slice(8);
             }
-            else if (field == 8 && wireType == 1) // end_time_unix_nano (fixed64)
+
+            // end_time_unix_nano (fixed64)
+            else if (field == 8 && wireType == 1)
             {
-                if (span.Length < 8) break;
+                if (span.Length < 8)
+                {
+                    break;
+                }
+
                 endTime = BinaryPrimitives.ReadUInt64LittleEndian(span);
                 span = span.Slice(8);
             }
@@ -192,7 +238,7 @@ public ref struct OtlpTraceReader
             TraceIdLow = traceIdLow,
             SpanId = spanIdVal,
             StartTimeUnixNano = startTime,
-            EndTimeUnixNano = endTime
+            EndTimeUnixNano = endTime,
         };
     }
 
@@ -208,7 +254,11 @@ public ref struct OtlpTraceReader
                 return span.Length >= 8 ? span.Slice(8) : default;
             case 2: // Length-delimited
                 var (len, lenConsumed) = VarIntDecoder.Decode(span);
-                if (lenConsumed == 0 || span.Length - lenConsumed < (int)len) return default;
+                if (lenConsumed == 0 || span.Length - lenConsumed < (int)len)
+                {
+                    return default;
+                }
+
                 return span.Slice(lenConsumed + (int)len);
             case 5: // 32-bit
                 return span.Length >= 4 ? span.Slice(4) : default;
