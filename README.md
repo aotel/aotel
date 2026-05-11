@@ -1,6 +1,6 @@
 # AOTel
 
-**The "Cloudflare for Telemetry"** — A hyper-fast OTLP edge ingestion proxy built with .NET 10 Native AOT, featuring an allocation-free hot path.
+AOTel: The "High-Speed Pre-Parser" for OpenTelemetry
 
 [![Continuous Integration](https://github.com/aotel/aotel/actions/workflows/ci.yml/badge.svg)](https://github.com/aotel/aotel/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -39,7 +39,15 @@ AOTel is engineered with fanatical attention to memory layout and execution spee
 
 ---
 
-## 🛠️ Getting Started: A Drop-in Replacement
+## 🤝 How it fits with the OTel Collector
+AOTel is designed to complement, not replace, your OTel Collector.
+AOTel handles the "First Mile": Ultra-fast ingestion, validation, and local node buffering with 0-GC impact.
+OTel Collector handles the "Brain": Complex routing, PII masking, tail-sampling, and multi-destination exporting.
+The Result: By offloading the raw ingestion to AOTel (Native AOT), you can scale down your main Collector’s CPU/RAM requirements.
+
+---
+
+## 🛠️ Getting Started: A Drop-in Ingestion Layer
 
 AOTel implements the standard OpenTelemetry Protocol (OTLP) HTTP ingest endpoint. You do not need to change a single line of your application code or observability backend to start using it.
 
