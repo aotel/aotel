@@ -5,43 +5,43 @@ using AOTel.Core.Parsing;
 namespace AOTel.Hosting.Services;
 
 /// <summary>
-/// A background service dedicated to draining the TelemetryBuffer and exporting 
+/// A background service dedicated to draining the TelemetryBuffer and exporting
 /// the payloads over HTTP. Designed for Native AOT and high-performance throughput.
 /// </summary>
 public sealed class OtlpExporterService : BackgroundService
 {
-    private readonly TelemetryBuffer _buffer;
-    private readonly HttpClient _httpClient;
-    private readonly ILogger<OtlpExporterService> _logger;
-    private readonly Uri _exportUri = new Uri("http://localhost:4319/v1/traces");
+    private readonly TelemetryBuffer buffer;
+    private readonly HttpClient httpClient;
+    private readonly ILogger<OtlpExporterService> logger;
+    private readonly Uri exportUri = new Uri("http://localhost:4319/v1/traces");
 
     public OtlpExporterService(TelemetryBuffer buffer, ILogger<OtlpExporterService> logger)
     {
-        _buffer = buffer;
-        _logger = logger;
-        
+        this.buffer = buffer;
+        this.logger = logger;
+
         // High-Performance Networking Configuration:
         // SocketsHttpHandler is the most optimized HTTP handler in .NET.
         var handler = new SocketsHttpHandler
         {
-            // Prevents DNS staleness by recycling connections periodically while still 
+            // Prevents DNS staleness by recycling connections periodically while still
             // keeping them alive long enough to benefit from TCP connection pooling.
             PooledConnectionLifetime = TimeSpan.FromMinutes(2),
-            
+
             // Setting these maximizes throughput for high-volume concurrent exports.
             EnableMultipleHttp2Connections = true,
-            MaxConnectionsPerServer = 100
+            MaxConnectionsPerServer = 100,
         };
-        
-        _httpClient = new HttpClient(handler);
+
+        httpClient = new HttpClient(handler);
     }
-    
-    private static readonly System.Net.Http.Headers.MediaTypeHeaderValue _protobufHeader 
+
+    private static readonly System.Net.Http.Headers.MediaTypeHeaderValue ProtobufHeader
         = new("application/x-protobuf");
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await foreach (var batch in _buffer.Reader.ReadAllAsync(stoppingToken).ConfigureAwait(false))
+        await foreach (var batch in buffer.Reader.ReadAllAsync(stoppingToken).ConfigureAwait(false))
         {
             try
             {
@@ -50,13 +50,13 @@ public sealed class OtlpExporterService : BackgroundService
                 {
                     if (protoLength > 0)
                     {
-                        using var request = new HttpRequestMessage(HttpMethod.Post, _exportUri)
+                        using var request = new HttpRequestMessage(HttpMethod.Post, exportUri)
                         {
-                            Content = new ByteArrayContent(rentedProtobuf, 0, protoLength)
+                            Content = new ByteArrayContent(rentedProtobuf, 0, protoLength),
                         };
-                        request.Content.Headers.ContentType = _protobufHeader; // Cached
+                        request.Content.Headers.ContentType = ProtobufHeader; // Cached
 
-                        using var response = await _httpClient.SendAsync(request, stoppingToken).ConfigureAwait(false);
+                        using var response = await httpClient.SendAsync(request, stoppingToken).ConfigureAwait(false);
                     }
                 }
                 finally
@@ -69,14 +69,14 @@ public sealed class OtlpExporterService : BackgroundService
             }
             finally
             {
-                _buffer.ReturnBatch(batch);
+                TelemetryBuffer.ReturnBatch(batch);
             }
         }
     }
-        
+
     public override void Dispose()
     {
-        _httpClient.Dispose();
+        httpClient.Dispose();
         base.Dispose();
     }
 }

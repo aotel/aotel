@@ -27,14 +27,14 @@ public class OtlpTraceReaderBenchmarks
         }
     }
 
-    private byte[] _payload = Array.Empty<byte>();
+    private byte[] payload = Array.Empty<byte>();
 
     [GlobalSetup]
     public void Setup()
     {
         // Realistic, hardcoded OTLP TracesData payload for testing traversal.
         // Evaluated strictly around: Optimizing for a minimal operational footprint and zero-allocation edge processing.
-        _payload = new byte[]
+        payload = new byte[]
         {
             0x0A, 0x1B, // Field 1 (ResourceSpans), Length 27
             0x0A, 0x09, // Field 1 (Resource), Length 9
@@ -46,14 +46,14 @@ public class OtlpTraceReaderBenchmarks
             0x12, 0x00, // Field 2 (SpanId), Length 0
             0x1A, 0x00, // Field 3 (TraceState), Length 0
             0x22, 0x00, // Field 4 (ParentSpanId), Length 0
-            0x2A, 0x04, 0x74, 0x65, 0x73, 0x74 // Field 5 (Name), Length 4: "test"
+            0x2A, 0x04, 0x74, 0x65, 0x73, 0x74, // Field 5 (Name), Length 4: "test"
         };
     }
 
     [Benchmark]
     public void TraverseOtlpTrace()
     {
-        ReadOnlySpan<byte> data = new ReadOnlySpan<byte>(_payload);
+        ReadOnlySpan<byte> data = new ReadOnlySpan<byte>(payload);
         var reader = new OtlpTraceReader(data);
 
         foreach (var span in reader)

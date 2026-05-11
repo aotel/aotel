@@ -10,5 +10,5 @@ namespace AOTel.Core.Processing;
 public interface ISpanProcessor
 {
     // The 'in' modifier prevents defensive copies of the struct
-    void Process(in OtlpSpan span); 
+    void Process(in OtlpSpan span);
 }
