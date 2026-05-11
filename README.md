@@ -1,6 +1,6 @@
 # AOTel
 
-AOTel: The "High-Speed Pre-Parser" for OpenTelemetry
+AOTel: A Native AOT First-Mile Ingestion Layer for OpenTelemetry
 
 [![Continuous Integration](https://github.com/aotel/aotel/actions/workflows/ci.yml/badge.svg)](https://github.com/aotel/aotel/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -9,29 +9,64 @@ AOTel is an ultra-lightweight telemetry edge proxy designed to sit as a DaemonSe
 
 ---
 
+## ⚡ The AOTel Architecture: Tiered Ingestion
+To ensure deterministic performance under bursty telemetry loads, AOTel implements a tiered approach. Use your central Collector for the complex "brain" work, and use AOTel DaemonSets for the high-speed "muscle" at the edge.
+
+```
+[ Application Pods ]
+         │
+         │  OTLP/HTTP (Localhost/Host IP)
+         ▼
+[ Node-local AOTel DaemonSet ]  <-- Allocation-Free OTLP Parsing, Bounded Buffer
+         │
+         │  OTLP/HTTP (Batched & Validated)
+         ▼
+[ Central OTel Collector ]      <-- Complex Routing, Sampling, Plugins
+         │
+         │  gRPC/HTTP
+         ▼
+[ Observability Backend ]       <-- Jaeger, Honeycomb, Datadog
+```
+
+<sub>**Note on Protocols:** AOTel currently focuses on OTLP/HTTP (Protobuf) to provide the lowest possible entry barrier and the most stable memory profile for edge ingestion. OTLP/gRPC support is planned for the v0.2 roadmap.</sub>
+
+---
+
 ## 🚀 The Operational Story: Why AOTel?
 
 Modern cloud-native applications generate massive amounts of telemetry (traces, metrics, and logs). Sending this raw Protobuf data directly to a centralized OpenTelemetry Collector or observability backend introduces significant friction:
 
 1. **Cross-Node Latency & Cost**: Applications sending telemetry out of their local node incur network hops, cross-AZ data transfer charges, and potential network saturation.
-2. **Application GC Pressure**: Serialization, batching, and retrying telemetry payloads inside the application process steal CPU cycles and induce Garbage Collection (GC) pauses—hurting your actual business workloads.
+2. **Application GC Pressure**: Telemetry export pipelines can introduce additional CPU, memory, and retry overhead inside application processes—especially under high throughput or degraded network conditions.
 3. **Heavy Central Collectors**: Centralized collectors often require gigabytes of memory to handle cluster-wide ingestion spikes.
 
-**AOTel flips the architecture.** Deployed as a Kubernetes DaemonSet, AOTel is designed around a zero-allocation parsing pipeline. Application pods send telemetry directly to their local node's IP (`HOST_IP:4318`). AOTel utilizes highly efficient, bounded in-memory buffering to absorb the payload instantly before initiating the allocation-free traversal on the hot path, and efficiently batches it to your backend (Jaeger, Datadog, Honeycomb, or a central OTel Collector). 
+**AOTel flips the architecture.** Deployed as a Kubernetes DaemonSet, AOTel is designed around a zero-allocation parsing pipeline. Application pods send telemetry directly to their local node's IP (`HOST_IP:4318`). AOTel uses bounded in-memory buffering to absorb bursts locally before efficiently forwarding telemetry upstream.
 
 Your application pods are relieved of memory pressure, and cross-node telemetry traffic is drastically minimized.
 
 ---
 
+## When AOTel may not be necessary
+
+AOTel is most beneficial in:
+- high-throughput Kubernetes clusters
+- noisy multi-tenant environments
+- latency-sensitive workloads
+- clusters with heavy telemetry fan-in
+
+Smaller deployments may be well-served by a standard OTel Collector alone.
+
+---
+
 ## ⚡ Performance & Resource Footprint
 
-AOTel is engineered with fanatical attention to memory layout and execution speed. Using strict `ref struct` state machines and `ReadOnlySpan<byte>` parsers, the core ingestion pipeline is allocation-free on the hot path.
+AOTel is engineered with careful attention to memory layout and execution speed. Using strict `ref struct` state machines and `ReadOnlySpan<byte>` parsers, the core ingestion pipeline is allocation-free on the hot path.
 
 ### Core Benchmarks
 
 | Metric | Value | Description |
 | :--- | :--- | :--- |
-| **Allocations (Gen 0/1/2)** | **0 Bytes** | The hot ingestion path guarantees zero managed heap allocations, meaning zero GC pauses during telemetry shredding. |
+| **Allocations (Gen 0/1/2)** | **0 Bytes** | The steady-state ingestion path avoids managed heap allocations during OTLP parsing and traversal. |
 | **Deployment Footprint** | **16.7 MB** | Fully statically linked Native AOT Linux binary deployed in a `scratch` container. |
 | **Idle Memory Usage** | **~ 15 MiB** | Ultra-low base resident set size (RSS), leaving maximum room for your business workloads. |
 
@@ -41,11 +76,12 @@ AOTel is engineered with fanatical attention to memory layout and execution spee
 
 ## 🤝 How it fits with the OTel Collector
 AOTel is designed to complement, not replace, your OTel Collector.
-AOTel handles the "First Mile": Ultra-fast ingestion, validation, and local node buffering with 0-GC impact.
-OTel Collector handles the "Brain": Complex routing, PII masking, tail-sampling, and multi-destination exporting.
-The Result: By offloading the raw ingestion to AOTel (Native AOT), you can scale down your main Collector’s CPU/RAM requirements.
 
----
+AOTel handles the "First Mile": Ultra-fast ingestion, validation, and local node buffering with 0-GC impact.
+
+OTel Collector handles the "Brain": Complex routing, PII masking, tail-sampling, and multi-destination exporting.
+
+By offloading the raw ingestion to AOTel (Native AOT), you can scale down your main Collector’s CPU/RAM requirements.
 
 ## 🛠️ Getting Started: A Drop-in Ingestion Layer
 
@@ -85,8 +121,11 @@ spec:
       containers:
         - name: aotel
           image: aotel:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 4318
+              hostPort: 4318
+              protocol: TCP
               name: otlp-http
           env:
             # Route traffic to your central OTel Collector service
@@ -101,6 +140,7 @@ spec:
               memory: 30Mi
           securityContext:
             readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
 ```
