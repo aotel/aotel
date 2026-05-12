@@ -1,3 +1,4 @@
+using System.Buffers;
 using AOTel.Core.Parsing;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
@@ -53,7 +54,7 @@ public class OtlpTraceReaderBenchmarks
     [Benchmark]
     public void TraverseOtlpTrace()
     {
-        ReadOnlySpan<byte> data = new ReadOnlySpan<byte>(payload);
+        ReadOnlySequence<byte> data = new ReadOnlySequence<byte>(payload);
         var reader = new OtlpTraceReader(data);
 
         foreach (var span in reader)
