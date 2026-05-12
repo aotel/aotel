@@ -46,15 +46,17 @@ Your application pods are relieved of memory pressure, and cross-node telemetry 
 
 ---
 
-## When AOTel may not be necessary
+## 🛑 The "No-Go" Zone (What AOTel is NOT)
 
-AOTel is most beneficial in:
-- high-throughput Kubernetes clusters
-- noisy multi-tenant environments
-- latency-sensitive workloads
-- clusters with heavy telemetry fan-in
+To maintain our sub-millisecond latency and zero-allocation hot path, AOTel strictly limits its scope. If you need the right-side column, you should route AOTel's output into a standard OpenTelemetry Collector.
 
-Smaller deployments may be well-served by a standard OTel Collector alone.
+| AOTel Does | AOTel Does NOT |
+| :--- | :--- |
+| Ultra-light OTLP forwarding | Complex pipelines |
+| Edge ingestion & buffering | Heavy transformations (Regex, PII masking) |
+| Predictable, bounded memory usage | Dynamic processors |
+| Fast startup (< 50ms) | Rich plugin ecosystem |
+| Native AOT deployment | Full Collector replacement |
 
 ---
 
@@ -64,11 +66,7 @@ AOTel is engineered with careful attention to memory layout and execution speed.
 
 ### Core Benchmarks
 
-| Metric | Value | Description |
-| :--- | :--- | :--- |
-| **Allocations (Gen 0/1/2)** | **0 Bytes** | The steady-state ingestion path avoids managed heap allocations during OTLP parsing and traversal. |
-| **Deployment Footprint** | **16.7 MB** | Fully statically linked Native AOT Linux binary deployed in a `scratch` container. |
-| **Idle Memory Usage** | **~ 15 MiB** | Ultra-low base resident set size (RSS), leaving maximum room for your business workloads. |
+<img width="832" height="540" alt="step1-benchmark" src="https://github.com/user-attachments/assets/5dbbd237-1bc8-4e3f-bb1e-b0ac64fe267e" />
 
 *Benchmarks are enforced automatically in CI using BenchmarkDotNet on .NET 10.*
 
