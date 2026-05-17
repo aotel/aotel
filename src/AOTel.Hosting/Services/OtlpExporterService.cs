@@ -13,27 +13,12 @@ public sealed class OtlpExporterService : BackgroundService
     private readonly TelemetryBuffer buffer;
     private readonly HttpClient httpClient;
     private readonly ILogger<OtlpExporterService> logger;
-    private readonly Uri exportUri = new Uri("http://localhost:4319/v1/traces");
 
-    public OtlpExporterService(TelemetryBuffer buffer, ILogger<OtlpExporterService> logger)
+    public OtlpExporterService(HttpClient httpClient, TelemetryBuffer buffer, ILogger<OtlpExporterService> logger)
     {
+        this.httpClient = httpClient;
         this.buffer = buffer;
         this.logger = logger;
-
-        // High-Performance Networking Configuration:
-        // SocketsHttpHandler is the most optimized HTTP handler in .NET.
-        var handler = new SocketsHttpHandler
-        {
-            // Prevents DNS staleness by recycling connections periodically while still
-            // keeping them alive long enough to benefit from TCP connection pooling.
-            PooledConnectionLifetime = TimeSpan.FromMinutes(2),
-
-            // Setting these maximizes throughput for high-volume concurrent exports.
-            EnableMultipleHttp2Connections = true,
-            MaxConnectionsPerServer = 100,
-        };
-
-        httpClient = new HttpClient(handler);
     }
 
     private static readonly System.Net.Http.Headers.MediaTypeHeaderValue ProtobufHeader
@@ -50,7 +35,7 @@ public sealed class OtlpExporterService : BackgroundService
                 {
                     if (protoLength > 0)
                     {
-                        using var request = new HttpRequestMessage(HttpMethod.Post, exportUri)
+                        using var request = new HttpRequestMessage(HttpMethod.Post, "v1/traces")
                         {
                             Content = new ByteArrayContent(rentedProtobuf, 0, protoLength),
                         };
@@ -72,11 +57,5 @@ public sealed class OtlpExporterService : BackgroundService
                 TelemetryBuffer.ReturnBatch(batch);
             }
         }
-    }
-
-    public override void Dispose()
-    {
-        httpClient.Dispose();
-        base.Dispose();
     }
 }

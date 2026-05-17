@@ -5,7 +5,7 @@ using AOTel.Core.Models;
 namespace AOTel.Core.Processing;
 
 // Struct implementation avoids heap allocation
-public struct TelemetryProcessor : ISpanProcessor
+public struct TelemetryProcessor
 {
     private readonly TelemetryBuffer buffer;
     private OtlpSpan[] rentedArray;
@@ -25,13 +25,9 @@ public struct TelemetryProcessor : ISpanProcessor
     {
         if (count >= rentedArray.Length)
         {
-            var newArray = ArrayPool<OtlpSpan>.Shared.Rent(rentedArray.Length * 2);
-            Array.Copy(rentedArray, newArray, count);
-
-            var oldArray = rentedArray;
-            rentedArray = newArray; // Update reference FIRST
-
-            ArrayPool<OtlpSpan>.Shared.Return(oldArray, clearArray: false);
+            Flush();
+            count = 0;
+            rentedArray = ArrayPool<OtlpSpan>.Shared.Rent(4096);
         }
 
         rentedArray[count++] = span;
@@ -39,6 +35,12 @@ public struct TelemetryProcessor : ISpanProcessor
 
     public void Flush()
     {
+        // Prevent double returns if Flush is called multiple times or after an empty chunking
+        if (rentedArray == null || rentedArray.Length == 0)
+        {
+            return;
+        }
+
         if (count > 0)
         {
             // Handoff to the background service.
@@ -50,5 +52,9 @@ public struct TelemetryProcessor : ISpanProcessor
             // If the HTTP payload had zero valid spans, recycle the memory immediately.
             ArrayPool<OtlpSpan>.Shared.Return(rentedArray, clearArray: false);
         }
+
+        // Clear the reference so it isn't returned to the ArrayPool again
+        rentedArray = Array.Empty<OtlpSpan>();
+        count = 0;
     }
 }

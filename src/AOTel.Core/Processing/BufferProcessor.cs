@@ -9,8 +9,7 @@ namespace AOTel.Core.Processing;
 /// </summary>
 public static class BufferProcessor
 {
-    public static bool Process<TProcessor>(ReadOnlySequence<byte> buffer, ref TProcessor processor)
-        where TProcessor : struct, ISpanProcessor
+    public static bool Process(ReadOnlySequence<byte> buffer, ref TelemetryProcessor processor)
     {
         int length = (int)buffer.Length;
         if (length > 1024 * 1024 * 5)

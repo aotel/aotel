@@ -5,7 +5,7 @@ using AOTel.Core.Buffers;
 using AOTel.Core.Processing;
 using AOTel.Hosting.Services;
 
-var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions { Args = args });
+var builder = WebApplication.CreateSlimBuilder(args);
 
 builder.WebHost.UseKestrelCore();
 builder.WebHost.UseSockets();
@@ -14,12 +14,24 @@ builder.WebHost.ConfigureKestrel(options =>
     options.Listen(IPAddress.Parse("0.0.0.0"), 4318);
 });
 
-// Minimal requirement to support Endpoint Routing (MapPost) on an empty builder
-builder.Services.AddRoutingCore();
-
 // Register the TelemetryBuffer and the background exporter service
 builder.Services.AddSingleton(new TelemetryBuffer(maxCapacityBatches: 1024));
 builder.Services.AddHostedService<OtlpExporterService>();
+
+builder.Services.AddHttpClient<OtlpExporterService>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["AOTEL_UPSTREAM_URL"] ?? "http://localhost:4319");
+})
+.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+{
+    // Prevents DNS staleness by recycling connections periodically while still
+    // keeping them alive long enough to benefit from TCP connection pooling.
+    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+
+    // Setting these maximizes throughput for high-volume concurrent exports.
+    EnableMultipleHttp2Connections = true,
+    MaxConnectionsPerServer = 100,
+});
 
 var app = builder.Build();
 

@@ -8,7 +8,7 @@ using BenchmarkDotNet.Toolchains.NativeAot;
 namespace AOTel.Benchmarks;
 
 [MemoryDiagnoser]
-[Config(typeof(Config))]
+[Config(typeof(Config))] // <--- Comment this out locally! // [ShortRunJob] // <--- Add this to run fewer iterations locally
 public class OtlpTraceReaderBenchmarks
 {
     private class Config : ManualConfig
